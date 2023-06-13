@@ -9,7 +9,7 @@ Reconhecimento facial de candidatos em agencia de vagas de emprego
 $ git clone https://github.com/emiletaise/ha-vagas-candidatos-bdd.git
 
 # Entre na pasta do projeto
-$ cd andidatos
+$ cd candidatos
 
 # Instale as dependências
 $ pip3 install -r requirements.txt
