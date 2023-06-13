@@ -16,3 +16,5 @@ $ pip3 install -r requirements.txt
 
 # Execute o comando
 $ behave
+ou
+$ python -m behave
