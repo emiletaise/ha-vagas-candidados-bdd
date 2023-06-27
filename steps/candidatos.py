@@ -1,134 +1,172 @@
 import face_recognition as reconhecedor
-import colored
+import secrets
 import simpy
 import json
 
-ARQUIVO_DE_CONFIGURACAO = "../ha-vagas-candidatos-bdd/configuracao.json"
-ARQUIVO_DE_VAGAS = "../ha-vagas-candidatos-bdd/vagas.json"
+ARQUIVO_DE_CONFIGURACAO = "../ha-vagas-candidatos/configuracao.json"
+ARQUIVO_DE_VAGAS = "../ha-vagas-candidatos/vagas.json"
 
-# Função para ler as configurações do arquivo JSON
-def ler_configuracao():
-    try:
-        with open(ARQUIVO_DE_CONFIGURACAO, "r") as arquivo:
-            configuracao = json.load(arquivo)
-            if configuracao:
-                print("Arquivo de configuração carregado")
-                return configuracao
-    except Exception as e:
-        print(f"Erro ao ler configuração: {str(e)}")
-    return None
+# Função para ler as configurações e vagas do arquivo JSON
+def preparar():
+  configuracao, vagas = None
 
-# Função para ler as vagas do arquivo JSON
-def ler_vagas():
-    try:
-        with open(ARQUIVO_DE_VAGAS, "r") as arquivo:
-            vagas = json.load(arquivo)
-            if vagas:
-                print("Arquivo de vagas carregado")
-                return vagas
-    except Exception as e:
-        print(f"Erro ao ler vagas: {str(e)}")
-    return None
+  try:
+    with open(ARQUIVO_DE_CONFIGURACAO, "r") as arquivo_configuração:
+      configuracao = json.load(arquivo_configuração)
+      if configuracao:
+        print("Arquivo de configuração carregado")
+      arquivo_configuração.close()
+
+    with open(ARQUIVO_DE_VAGAS, "r") as arquivo_vagas:
+      vagas = json.load(arquivo_vagas)
+      if vagas:
+        print("Arquivo de vagas carregado")
+      arquivo_vagas.close()
+  except Exception as e:
+    print(f"Erro ao ler configuração ou vagas: {str(e)}")
+  
+  candidatos_reconhecidos = {}
+  candidatos_com_cadastro = {}
+  candidatos_apto = {}
+
 
 def simular_visitas(foto):
     print(f"Foto de visitantes: {foto}")
 
     visitantes = {
         "foto": foto,
-        "pacientes": None
+        "candidatos": None
     }
     return visitantes
 
 def candidato_reconhecido_previamente(candidato, candidatos_reconhecidos):
-    reconhecido_previamente = False
-    for reconhecido in candidatos_reconhecidos.values():
-        if candidato["codigo"] == reconhecido["codigo"]:
-            reconhecido_previamente = True
-            break
-    return reconhecido_previamente
+
+  reconhecido_previamente = False
+  for reconhecido in candidatos_reconhecidos.values():
+    if candidato["codigo"] == reconhecido["codigo"]:
+      reconhecido_previamente = True
+      break
+  return reconhecido_previamente
 
 def reconhecer_candidatos(visitantes, configuracao, candidatos_reconhecidos):
-    print("Realizando reconhecimento de candidatos...")
-    foto_visitantes = reconhecedor.load_image_file(visitantes["foto"])
-    caracteristicas_dos_visitantes = reconhecedor.face_encodings(foto_visitantes)
+  print("\nRealizando reconhecimento de candidatos...")
 
-    candidatos = []
-    for candidato in configuracao["candidatos"]:
-        if not candidato_reconhecido_previamente(candidato, candidatos_reconhecidos):
-            fotos = candidato["fotos"]
-            total_de_reconhecimentos = 0
+  foto_visitantes = reconhecedor.load_image_file(visitantes["foto"])
+  caracteristicas_dos_visitantes = reconhecedor.face_encodings(foto_visitantes)
 
-            for foto in fotos:
-                foto = reconhecedor.load_image_file(foto)
-                caracteristicas = reconhecedor.face_encodings(foto)[0]
+  candidatos = []
+  for candidato in configuracao["candidatos"]:
+    if not candidato_reconhecido_previamente(candidato):
+      fotos = candidato["fotos"]
+      total_de_reconhecimentos = 0
 
-                reconhecimentos = reconhecedor.compare_faces(
-                    caracteristicas_dos_visitantes, caracteristicas)
-                if True in reconhecimentos:
-                    total_de_reconhecimentos += 1
+      for foto in fotos:
+        foto = reconhecedor.load_image_file(foto)
+        caracteristicas = reconhecedor.face_encodings(foto)[0]
 
-            if total_de_reconhecimentos / len(fotos) >= 0.6:
-                candidatos.append(candidato)
-        else:
-            print("Candidato reconhecido previamente")
+        reconhecimentos = reconhecedor.compare_faces(
+          caracteristicas_dos_visitantes, caracteristicas)
+        if True in reconhecimentos:
+          total_de_reconhecimentos += 1
 
-    for candidato in candidatos:
-        if candidato['cadastro'] == False:
-            encaminhar_recepcao(candidato)
-
-    return (len(candidatos) > 0), candidatos
-
-def imprimir_dados_do_candidato(paciente):
-    print(colored.fg('black'), colored.bg(
-        'yellow'), f"candidato reconhecido:", colored.attr('reset'))
-    print(colored.fg('black'), colored.bg(
-        'yellow'), f"nome: {paciente['nome']}", colored.attr('reset'))
-    print(colored.fg('black'), colored.bg(
-        'yellow'), f"idade: {paciente['idade']}", colored.attr('reset'))
-    print(colored.fg('black'), colored.bg(
-        'yellow'), f"tem cadastro: {paciente['cadastro']}", colored.attr('reset'))
-    
-
-def verificar_vagas(habilidade, configuracao, vagas):
-    for vaga in vagas["vagas"]:
-        habilidades_vaga = vaga['habilidade']
-        if habilidade in habilidades_vaga:
-            print("Vaga compatível encontrada:", vaga["titulo"])
-            return True
-    return False
-
-def agendar_entrevista(candidato, vagas):
-    habilidade_candidato = candidato['habilidade']
-    vagas_compativeis = []
-
-    for vaga in vagas["vagas"]:
-        habilidades_vaga = vaga['habilidade']
-        if habilidade_candidato in habilidades_vaga:
-            vagas_compativeis.append(vaga)
-
-    if len(vagas_compativeis) == 0:
-        print("Não há disponibilidade de vagas para a habilidade do candidato.")
+      if total_de_reconhecimentos / len(fotos) >= 0.6:
+        candidatos.append(candidato)
     else:
-        vaga_escolhida = vagas_compativeis[0]
-        print("Entrevista agendada para a vaga:", vaga_escolhida["titulo"])
+      print("Candidato reconhecido previamente")
 
-def encaminhar_recepcao(candidato):
+  return (len(candidatos) > 0), candidatos
 
-    print("Encaminhando candidato para a recepção:", candidato["nome"])
-    if not candidato["cadastro"]:
-        print("Candidato sem cadastro!")
-    
-def reconhecer_visitantes(ambiente_de_simulacao, configuracao, vagas, candidatos_reconhecidos):
-    while True:
-        print(f"Tentando reconhecer um candidato entre visitantes em {ambiente_de_simulacao.now}")
+def imprimir_dados_do_candidato(candidato):
+  print(f"\nCandidato reconhecido: {candidato['nome']}")
+  print(f"Idade: {candidato['idade']}")
+  print(f"Tem cadastro: {candidato['cadastro']}")
+  print(f"Habilidade: {candidato['habilidade']}")
 
-        visitantes = simular_visitas()
-        ocorreram_reconhecimentos, candidatos = reconhecer_candidatos(visitantes, configuracao, candidatos_reconhecidos)
 
-        if ocorreram_reconhecimentos:
-            for candidato in candidatos:
-                imprimir_dados_do_candidato(candidato)
-                if candidato['cadastro'] == True:
-                    agendar_entrevista(candidato, vagas)
-        # Tempo de detecção de candidatos
-        yield ambiente_de_simulacao.timeout(40) 
+def verificar_vagas(ambiente_de_simulacao, vagas, candidatos_com_cadastro, candidatos_apto):
+
+  while True:
+    if len(candidatos_com_cadastro):
+      print(f"\nVerificando vagas em {ambiente_de_simulacao.now}")
+
+      for id, candidato in list(candidatos_com_cadastro.items()):
+        vagas_compativeis = []
+        for vaga in vagas["vagas"]:
+          if candidato['habilidade'] in vaga['habilidade']:
+              vagas_compativeis.append(vaga)
+
+        if len(vagas_compativeis) == 0:
+          print("\nNão há disponibilidade de vagas para a habilidade do candidato ", candidato["nome"])
+        else:
+          candidatos_apto[id] = candidato
+          vaga_escolhida = vagas_compativeis[0]
+          print("\nO candidato ", candidato["nome"], "está apto para a vaga:", vaga_escolhida["titulo"])
+
+      yield ambiente_de_simulacao.timeout(40)
+    else:
+      yield ambiente_de_simulacao.timeout(1)
+
+
+def agendar_entrevista(ambiente_de_simulacao,candidatos_apto):
+
+  while True:
+    if len(candidatos_apto):
+      print(f"\nAgendando entrevista em {ambiente_de_simulacao.now}")
+
+      for id, candidato in list(candidatos_apto.items()):
+        print("\nO candidato", candidato["nome"], "está com sua entrevista marcada para a vaga compatível")
+
+      yield ambiente_de_simulacao.timeout(40)
+    else:
+      yield ambiente_de_simulacao.timeout(1)
+
+def encaminhar_recepcao(ambiente_de_simulacao, candidatos_reconhecidos, candidatos_com_cadastro):
+
+  while True:
+    if len(candidatos_reconhecidos):
+      print(f"\nIdentificando cadidatos com cadastro em {ambiente_de_simulacao.now}")
+
+      for id, candidato in list(candidatos_reconhecidos.items()):
+        if candidato['cadastro'] == False:
+          print("\nO candidato", candidato["nome"], "não tem cadastro e está sendo encaminhado para a recepção")
+        else: 
+          candidatos_com_cadastro[id] = candidato
+
+      yield ambiente_de_simulacao.timeout(40)
+    else:
+      yield ambiente_de_simulacao.timeout(1)
+
+def reconhecer_visitantes(ambiente_de_simulacao, candidatos_reconhecidos):
+
+  while True:
+    print(f"\nTentando reconhecer um candidato entre visitantes em {ambiente_de_simulacao.now}")
+
+    visitantes = simular_visitas()
+    ocorreram_reconhecimentos, candidatos = reconhecer_candidatos(visitantes)
+
+    if ocorreram_reconhecimentos:
+      for candidato in candidatos:
+        id = secrets.token_hex(nbytes=16).upper()
+        candidatos_reconhecidos[id] = candidato
+
+        imprimir_dados_do_candidato(candidato)
+    else:
+      print(f"\nNenhum candidato foi reconhecido")
+
+    yield ambiente_de_simulacao.timeout(40) 
+
+def limpar_lista_candidatos(ambiente_de_simulacao, candidatos_reconhecidos, candidatos_com_cadastro, candidatos_apto):
+
+  while True:
+    if len(candidatos_reconhecidos):
+      print(f"\nlimpando lista de candidatos em {ambiente_de_simulacao.now}")
+
+      candidatos_reconhecidos = {}
+
+      candidatos_com_cadastro = {}
+
+      candidatos_apto = {}
+
+      yield ambiente_de_simulacao.timeout(40)
+    else:
+      yield ambiente_de_simulacao.timeout(1)

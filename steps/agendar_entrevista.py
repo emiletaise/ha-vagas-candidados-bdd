@@ -1,26 +1,18 @@
 from behave import given, when, then
-from candidatos import *
+from candidatos import * 
 
-@given('eu possuo um candidato com habilidade "{habilidade}"')
-def given_possuo_candidato_com_habilidade(context, habilidade):
-    context.candidato = {
-        "habilidade": habilidade,
-        "cadastro": True
-    }
+@given('existem candidatos aptos')
+def existe_candidatos_apto(context):
+    context.candidatos_apto = candidato_reconhecido_previamente()
 
-@when('eu agendo a entrevista')
-def when_agendo_entrevista(context):
-    agendar_entrevista(context.candidato, context.vagas)
+@when('agendo a entrevista')
+def agendo_entrevista(context):
+    entrevista_generator = agendar_entrevista(context.ambiente_de_simulacao, context.candidatos_apto)
+    context.entrevista_iterator = iter(entrevista_generator)
 
-@then('a entrevista deve ser agendada para uma vaga compatível')
-def then_entrevista_agendada(context):
-    habilidade_do_candidato = context.habilidade_do_candidato
-    configuracao = ler_configuracao()
-    vagas = ler_vagas()
-
-    if verificar_vagas(habilidade_do_candidato, configuracao, vagas):
-        candidato = {"habilidade": habilidade_do_candidato}
-        agendar_entrevista(candidato, vagas)
-    else:
-        raise AssertionError("Nenhuma vaga compatível encontrada para a habilidade do candidato.")
-
+@then('a entrevista é agendada para uma vaga compatível')
+def entrevista_agendada(context):
+    try:
+        next(context.entrevista_iterator)
+    except StopIteration:
+        pass

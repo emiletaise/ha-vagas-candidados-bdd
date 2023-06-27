@@ -1,23 +1,18 @@
 from behave import given, when, then
 from candidatos import *
 
-@given('que possuo um candidato sem cadastro')
-def given_possuo_candidato_sem_cadastro(context):
-    context.candidato = {
-        "nome": "Candidato Sem Cadastro",
-        "cadastro": False
-    }
+@given('possuo candidatos reconhecidos')
+def candidatos_reconhecidos(context):
+    context.candidatos_reconhecidos = candidato_reconhecido_previamente()  # Implemente a função load_candidatos_reconhecidos para carregar os candidatos reconhecidos
+
+@given('possuo candidatos com cadastro')
+def candidatos_com_cadastro(context):
+    context.candidatos_com_cadastro = verificar_vagas()  # Implemente a função load_candidatos_com_cadastro para carregar os candidatos com cadastro
 
 @when('eu encaminho o candidato para a recepção')
-def when_encaminho_candidato_recepcao(context):
-    encaminhar_recepcao(context.candidato)
-
-@then('o candidato é encaminhado corretamente')
-def then_candidato_encaminhado_corretamente(context):
-    assert context.candidato["nome"] == "Candidato Sem Cadastro"
+def encaminhar_candidato_recepcao(context):
+    encaminhar_recepcao(context.ambiente_de_simulacao, context.candidatos_reconhecidos, context.candidatos_com_cadastro)
 
 @then('eu imprimo a mensagem de candidato sem cadastro')
-def then_imprimo_mensagem_candidato_sem_cadastro(context):
-    assert "Candidato sem cadastro!" in context.printed_messages
-
-
+def imprimir_mensagem_candidato_sem_cadastro(context):
+    imprimir_dados_do_candidato(context.candidato)

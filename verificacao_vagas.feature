@@ -1,9 +1,7 @@
-Feature: Verificando vagas disponíveis
+Feature: Verificar Vagas
 
-  Scenario: Verificar vagas
-    Given que possuo a habilidade "habilidade_do_candidato"
-    And que existem vagas disponíveis
-    When eu verifico as vagas
-    Then eu encontro uma vaga compatível
-    And eu imprimo a vaga compatível
-
+  Scenario: Verificar vagas disponíveis
+    Given existem candidatos aptos
+    When verifico as vagas
+    Then encontro vagas compatíveis
+    And imprimo as vagas compatíveis
